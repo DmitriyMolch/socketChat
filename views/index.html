@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Socket.IO chat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font: 16px Helvetica, Arial;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 5px 10px;
+    }
+
+    li {
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    #userList {
+      margin: 10px;
+      padding: 5px;
+    }
+
+    #user {
+      padding: 10px;
+    }
+
+    .chatBox {
+      margin: 10px;
+    }
+
+    .chatForm {
+      padding: 3px;
+      margin: 20px;
+      width: 80%;
+    }
+
+    .chatForm input {
+      border: 1px solid black;
+      padding: 10px;
+      width: 70%;
+      margin-right: .5%;
+    }
+
+    .chatForm button {
+      width: 20%;
+      background: lightgreen;
+      border: none;
+      padding: 10px;
+    }
+
+    #mainMsgs, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+      padding: 5px;
+    }
+
+    #mainBox {
+      padding: 5px;
+    }
+  </style>
+</head>
+
+<body>
+<div id="userList">
+  <b>USERS:</b>
+  <span id="users"></span>
+</div>
+
+<div class="container">
+  <div class="chatBox" id="mainBox">
+    <table id="mainMsgs">
+      <tr id="msgHeader">
+        <th colspan="2">Messages</th>
+      </tr>
+    </table>
+    <form class="chatForm" id="mainMsgForm" action="">
+      <input type="text" name="message" id="mainMsg" autocomplete="off" placeholder="type..."/>
+      <button>Send</button>
+    </form>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script>
+  $(function () {
+    const socket = io();
+    const msgTable = $('#mainMsgs');
+    const msgForm = $('#mainMsgForm');
+    const msgTh = $('#msgHeader');
+    const usersDiv = $('#users');
+
+    let user = JSON.parse(localStorage.getItem('user'));
+    socket.emit('sendUserId', user && user.id);
+
+    socket.on('connect', () => {
+      console.log('connect');
+    })
+
+    socket.on('userConnect', (connectedUser, users) => {
+      updateUserList(users);
+      msgTable.append(`<tr><td><strong>${connectedUser.username}<strong></td><td>connected to the chat room</td></tr>`);
+    })
+
+    socket.on('reconnect', () => {
+      console.log('reconnect');
+    })
+
+    socket.on('disconnect', () => {
+      msgTable.append(`<tr><td><strong>${user.username}<strong></td><td>disconnected from the chat room</td></tr>`);
+    })
+
+    // receive the data sent back from server and display on page
+    socket.on('chatMessage', (data) => {
+      console.log(data);
+      insertMsg(data.roomId, data.username, data.message);
+    })
+
+    socket.on('appError', (data) => {
+      alert(`Error: ${data.message}`);
+      if (data.message === 'Not Authorized') {
+        window.location.href = '/';
+      }
+    })
+
+    // when the form is submitted, the message is sent to server
+    msgForm.submit(() => {
+      let msg = $('#mainMsg');
+      const roomId = 'main';
+
+      $.ajax({
+        method: "POST",
+        url: "/publish",
+        headers: {
+          roomId: roomId,
+          userId: user.id
+        },
+        data: JSON.stringify({
+          message: msg.val()
+        }),
+        contentType: 'application/json'
+      }).done(function (res, status) {
+        if (status !== 'success') alert(res.message);
+        msg.val('').focus();
+      });
+      return false; // will not reload the page
+    })
+
+    //update users list when a new user logged in
+    const updateUserList = (users) => {
+      usersDiv.empty();
+      $.each(users, (index, value) => {
+        usersDiv.append(`<span id = ${value.id}>${value.username}</span> `);
+      });
+    }
+
+    // insert messages on pages
+    const insertMsg = (roomId, username, message) => {
+      msgTh.after(`<tr><td><strong class="username">${username}</strong></td><td>${message}</td></tr>>`);
+    }
+  });
+</script>
+</body>
+
+</html>

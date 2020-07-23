@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Auth</title>
+  <style>
+    body {
+      font: 16px Helvetica, Arial;
+    }
+
+    label {
+      min-width: 80px;
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+<h3>Login</h3>
+<label for="uname">Username</label> <input type="text" id="uname"></br>
+<label for="pwd">Password</label> <input type="password" id="pwd"></br>
+<button id="login">Login</button>
+<hr>
+<h3>Register</h3>
+<label for="regisUname">Username</label> <input type="text" id="regisUname"></br>
+<label for="regisPwd">Password</label> <input type="password" id="regisPwd"></br>
+<button id="register">Register</button>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+  const loginButton = $("#login");
+  const registerButton = $("#register");
+  const socket = io();
+
+  loginButton.click(function () {
+    socket.emit('login', {
+      'uname': $("#uname").val(),
+      'pwd': $("#pwd").val()
+    });
+  });
+
+  registerButton.click(function () {
+    socket.emit('register', {
+      'uname': $("#regisUname").val(),
+      'pwd': $("#regisPwd").val()
+    });
+  });
+
+  socket.on('loginSuccess', function (data) {
+    localStorage.user = JSON.stringify(data.user);
+    alert(data.message);
+    window.location.href = '/chat';
+  });
+
+  socket.on('registerSuccess', function (data) {
+    alert(data.message);
+  });
+
+  socket.on('appError', function (data) {
+    alert(`Error: ${data.message}`);
+  });
+</script>
+</body>
+
+</html>
